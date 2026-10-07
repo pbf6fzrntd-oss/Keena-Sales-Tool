@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import {spawn} from 'node:child_process';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
+import {randomBytes} from 'node:crypto';
+const dir=await mkdtemp(path.join(tmpdir(),'keena-http-'));
+const base='http://127.0.0.1:3107',key=randomBytes(32).toString('hex');
+const child=spawn(process.execPath,['node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port','3107'],{stdio:'ignore',env:{...process.env,KEENA_DEMO:'0',KEENA_ACCESS_KEY:key,KEENA_ORIGIN:base,KEENA_DATA_FILE:path.join(dir,'pipeline.json'),APOLLO_API_KEY:''}});
+const headers={Authorization:'Basic '+Buffer.from('keena:'+key).toString('base64'),Origin:base,'Content-Type':'application/json'};
+const request=(url,method='GET',body,extra={})=>fetch(base+url,{method,headers:{...headers,...extra},body:body===undefined?undefined:JSON.stringify(body)});
+try{
+  let ready=false;for(let i=0;i<100;i++){try{await fetch(base);ready=true;break;}catch{await new Promise(resolve=>setTimeout(resolve,100));}}assert.ok(ready,'local server ready');
+  assert.equal((await fetch(base+'/api/prospects')).status,401);
+  assert.equal((await request('/api/prospects','POST',{people:[]},{Origin:'https://evil.invalid'})).status,403);
+  const page=await (await request('/')).text();assert.ok(page.includes('Apollo prospect workspace'));assert.ok(page.includes('Opportunity queue'));
+  const before=await (await request('/api/prospects')).json();assert.equal(before.apolloConfigured,false);assert.equal(before.prospects.length,0);
+  assert.equal((await request('/api/apollo/search','POST',{domains:['example.org']})).status,503);
+  assert.equal((await request('/api/apollo/search','POST',{domains:['https://example.org']})).status,400);
+  const people=[{id:'http_test',name:'Fictional Buyer',title:'CIO',organization:{name:'Fictional Health',primary_domain:'example.org'}}];
+  let r=await request('/api/prospects','POST',{people});assert.equal((await r.json()).added,1);
+  r=await request('/api/prospects/http_test','PATCH',{stage:'do_not_contact',notes:'Operator research',version:0});assert.equal(r.status,200);
+  assert.equal((await request('/api/prospects/http_test','PATCH',{notes:'stale',version:0})).status,409);
+  r=await request('/api/prospects','POST',{people});assert.equal((await r.json()).duplicates,1);
+  const after=await (await request('/api/prospects')).json();assert.equal(after.prospects[0].notes,'Operator research');assert.equal(after.prospects[0].stage,'do_not_contact');
+  assert.equal((await (await request('/api/leads')).json()).leads.length,0);
+  assert.equal((await request('/api/prospects','POST',{people:[{id:'../bad'}]})).status,400);
+  assert.equal((await request('/api/leads/notfound','PATCH',{followUpDate:'2026-02-30',version:0})).status,400);
+  console.log('HTTP smoke passed: local compiled app, protected routes, origin rejection, HTML rendering, Apollo setup/errors, prospect persistence/dedup/suppression, stale conflict, opportunity separation, invalid date/ID rejection.');
+}finally{child.kill();await new Promise(resolve=>child.once('exit',resolve));await rm(dir,{recursive:true,force:true});}
