@@ -1,6 +1,8 @@
 import { isoWeekKey, scoreCandidate, type Lead, type RawCandidate } from "./scoring";
 import { leadsAddedThisWeek, mutatePipeline, type IngestRun } from "./store";
 
+import { clientCheck, loadClients } from "./clients";
+
 export const WEEKLY_LEAD_TARGET = 15;
 
 export interface IngestResult {
@@ -22,11 +24,13 @@ export async function ingestCandidates(
   file?: string
 ): Promise<IngestResult> {
   const isoWeek = isoWeekKey(now);
+  const registry = loadClients();
   return mutatePipeline((data) => {
   const seenUrls = new Set(data.leads.map((l) => canonicalUrl(l.url)));
   const alreadyThisWeek = leadsAddedThisWeek(data, isoWeek);
   const remaining = Math.max(0, WEEKLY_LEAD_TARGET - alreadyThisWeek);
 
+  let skippedExistingClient = 0;
   let skippedDuplicate = 0;
   let skippedOutOfIcp = 0;
   let skippedExpired = 0;
@@ -34,6 +38,8 @@ export async function ingestCandidates(
 
   for (let candidate of candidates) {
     candidate = { ...candidate, url: canonicalUrl(candidate.url) };
+    const check = clientCheck(candidate.organization, candidate.domain ?? "", registry);
+    if (check.status === "existing_client" || check.status === "review") { skippedExistingClient++; continue; }
     if (seenUrls.has(candidate.url)) {
       const existing = data.leads.find(l => canonicalUrl(l.url) === candidate.url);
       if (existing && candidate.checkedAt && !Number.isNaN(Date.parse(candidate.checkedAt))) { existing.checkedAt = candidate.checkedAt; existing.version = (existing.version ?? 0) + 1; }
@@ -66,6 +72,7 @@ export async function ingestCandidates(
     candidatesReviewed: candidates.length,
     added: toAdd.length,
     skippedDuplicate,
+    skippedExistingClient,
     skippedOutOfIcp,
     skippedExpired,
     skippedOverTarget,

@@ -4,15 +4,19 @@ import { isoWeekKey } from "@/lib/scoring";
 import { leadsAddedThisWeek, loadPipeline } from "@/lib/store";
 import { WEEKLY_LEAD_TARGET } from "@/lib/ingest";
 
+import { clientCheck, loadClients } from "@/lib/clients";
+
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   if (!(await accessAllowed(request))) return NextResponse.json({error:"Unauthorized"},{status:401});
   const data = await loadPipeline();
+  const registry = loadClients();
   const isoWeek = isoWeekKey(new Date());
   const lastRun = data.runs.at(-1) ?? null;
   return NextResponse.json({
-    leads: data.leads,
+    leads: data.leads.map(l=>({...l,clientCheck:clientCheck(l.organization,l.domain??"",registry)})),
+    clientRegistry: {loaded:!!registry,accounts:registry?.clients.length??0},
     mode: process.env.KEENA_DEMO === "1" ? "example" : "pilot",
     isoWeek,
     addedThisWeek: leadsAddedThisWeek(data, isoWeek),

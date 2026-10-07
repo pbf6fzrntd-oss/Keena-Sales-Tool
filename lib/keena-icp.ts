@@ -26,7 +26,12 @@ export interface KeywordRule {
 }
 
 export const KEYWORD_RULES: KeywordRule[] = [
-  { match: /\b(EHR|electronic health record)s?\s*(conversion|migration|transition)/i, serviceLine: "EHR Conversions", baseFit: 92 },
+  { match: /\b(?:EHR|EMR|PM|practice management)\b.{0,40}\b(?:migration|conversion|replacement)\b/i, serviceLine: "EHR Conversions", baseFit: 92 },
+  { match: /\b(?:manual document indexing|scan backlog|fax routing|document filing|InteleFiler|Chart2PDF|release of records)\b/i, serviceLine: "Document Management", baseFit: 84 },
+  { match: /\b(?:KeenaMe|FotoFiler|CPTII|CPT II|EHR personalization|medication barcode|vaccine barcode|automated user provisioning)\b/i, serviceLine: "Workflow Efficiency", baseFit: 80 },
+  { match: /\b(?:ETL|master data management|MDM|claims analytics|payer data)\b/i, serviceLine: "Financial Consulting", baseFit: 80 },
+
+  { match: /\b(EHR|EMR|electronic health record)s?\s*(conversion|migration|transition)/i, serviceLine: "EHR Conversions", baseFit: 92 },
   { match: /\blegacy\s*(EHR|system|application)s?\s*(archiv|retention|decommission|sunset)/i, serviceLine: "KeenaArchive", baseFit: 90 },
   { match: /\bdata\s*archiv(e|al|ing)\b|\brecords?\s*retention\b/i, serviceLine: "KeenaArchive", baseFit: 82 },
   { match: /\bdocument\s*management\b|\brecords?\s*management\b|\bimaging\s*(services|solution)\b|\bintelligent document processing\b|\bIDP\b/i, serviceLine: "Document Management", baseFit: 80 },
@@ -36,8 +41,6 @@ export const KEYWORD_RULES: KeywordRule[] = [
   { match: /\badvisory (services|consulting)\b|\bEHR optimization\b|\bpractice management\b.*(optim|consult)/i, serviceLine: "Advisory Consulting", baseFit: 74 },
   { match: /\bcustom (software|application) development\b.*(healthcare|health)|\bhealthcare IT vendor\b/i, serviceLine: "Custom Development", baseFit: 76 },
   { match: /\bpopulation health\b/i, serviceLine: "Population Health", baseFit: 72 },
-  { match: /\bdisaster recovery\b|\bbusiness continuity\b/i, serviceLine: "Disaster Recovery", baseFit: 72 },
-  { match: /\bpatient (engagement|portal)\b/i, serviceLine: "Patient Engagement", baseFit: 70 },
   { match: /\brevenue cycle\b|\bclaims (processing|automation)\b|\bmedical billing\b/i, serviceLine: "Financial Consulting", baseFit: 76 },
   { match: /\bworkflow (efficiency|optimization)\b|\bclinical workflow\b/i, serviceLine: "Workflow Efficiency", baseFit: 74 },
 ];

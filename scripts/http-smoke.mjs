@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
-import {mkdtemp,rm} from 'node:fs/promises';
+import {mkdtemp,rm,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {randomBytes} from 'node:crypto';
 const dir=await mkdtemp(path.join(tmpdir(),'keena-http-'));
+const clientFile=path.join(dir,'clients.json');
+await writeFile(clientFile,JSON.stringify({schemaVersion:1,clients:[{name:'Fictional Active Client',domains:['active.example']}]}));
 const base='http://127.0.0.1:3107',key=randomBytes(32).toString('hex');
-const child=spawn(process.execPath,['node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port','3107'],{stdio:'ignore',env:{...process.env,KEENA_DEMO:'0',KEENA_ACCESS_KEY:key,KEENA_ORIGIN:base,KEENA_DATA_FILE:path.join(dir,'pipeline.json'),APOLLO_API_KEY:''}});
+const child=spawn(process.execPath,['node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port','3107'],{stdio:'ignore',env:{...process.env,KEENA_CLIENTS_FILE:clientFile,KEENA_DEMO:'0',KEENA_ACCESS_KEY:key,KEENA_ORIGIN:base,KEENA_DATA_FILE:path.join(dir,'pipeline.json'),APOLLO_API_KEY:''}});
 const headers={Authorization:'Basic '+Buffer.from('keena:'+key).toString('base64'),Origin:base,'Content-Type':'application/json'};
 const request=(url,method='GET',body,extra={})=>fetch(base+url,{method,headers:{...headers,...extra},body:body===undefined?undefined:JSON.stringify(body)});
 try{
@@ -17,6 +19,8 @@ try{
   const before=await (await request('/api/prospects')).json();assert.equal(before.apolloConfigured,false);assert.equal(before.prospects.length,0);
   assert.equal((await request('/api/apollo/search','POST',{domains:['example.org']})).status,503);
   assert.equal((await request('/api/apollo/search','POST',{domains:['https://example.org']})).status,400);
+  assert.equal((await request('/api/apollo/search','POST',{domains:['active.example']})).status,409);
+  const blocked=await (await request('/api/prospects','POST',{people:[{id:'active_test',organization:{name:'Fictional Active Client'}}]})).json();assert.equal(blocked.blockedExistingClient,1);assert.equal(blocked.added,0);
   const people=[{id:'http_test',name:'Fictional Buyer',title:'CIO',organization:{name:'Fictional Health',primary_domain:'example.org'}}];
   let r=await request('/api/prospects','POST',{people});assert.equal((await r.json()).added,1);
   r=await request('/api/prospects/http_test','PATCH',{stage:'do_not_contact',notes:'Operator research',version:0});assert.equal(r.status,200);

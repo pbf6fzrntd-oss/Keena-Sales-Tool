@@ -1,3 +1,4 @@
+import { offeringMatches } from "./offerings";
 import { bestServiceLineMatch } from "./keena-icp";
 
 export type SourceType = "rfp" | "job_posting";
@@ -35,6 +36,7 @@ export interface RawCandidate {
   url: string;
   /** Free text (title + summary) the keyword rules are matched against. */
   text: string;
+  domain?: string;
   location?: string;
   /** ISO date the RFP/job was posted or issued, if known. */
   postedDate?: string;
@@ -66,6 +68,9 @@ export interface Lead {
   version?: number;
   nextAction?: string;
   followUpDate?: string;
+  domain?: string;
+  clientCheck?: {status:string;reason:string};
+  offeringMatches?: {product:string;buyerTitles:string[];slides:string;matchedOn:string}[];
 }
 
 function initialsFor(name: string): string {
@@ -133,6 +138,8 @@ export function scoreCandidate(candidate: RawCandidate, isoWeek: string, now: Da
     postedDate: candidate.postedDate ?? null,
     deadline: candidate.deadline ?? null,
     fit,
+    domain: candidate.domain,
+    offeringMatches: offeringMatches(candidate.text),
     serviceLine: match.serviceLine,
     matchedKeyword: match.matchedOn,
     signal,

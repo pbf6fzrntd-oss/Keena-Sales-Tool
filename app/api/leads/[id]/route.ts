@@ -1,3 +1,4 @@
+import { clientCheck } from "@/lib/clients";
 import { accessAllowed, mutationAllowed } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { updateLead } from "@/lib/store";
@@ -23,6 +24,6 @@ export async function PATCH(
     for(const field of ["stage","notes","owner","nextAction","followUpDate"] as const)if(body[field]!==undefined)patch[field]=body[field];
     const lead=await updateLead(id,patch,undefined,body.version);
     if(!lead)return NextResponse.json({error:"Lead not found"},{status:404});
-    return NextResponse.json({lead});
+    return NextResponse.json({lead:{...lead,clientCheck:clientCheck(lead.organization,lead.domain??"")}});
   } catch(error) { return NextResponse.json({error:error instanceof Error && error.message==="stale_version"?"Lead changed; reload before saving.":"Update could not be processed"},{status:error instanceof Error && error.message==="stale_version"?409:400}); }
 }

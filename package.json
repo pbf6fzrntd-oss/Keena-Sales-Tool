@@ -13,7 +13,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
-    "leads:ingest": "tsx scripts/ingest-candidates.ts",
+    "leads:ingest": "node --import tsx scripts/ingest-candidates.ts",
     "test:http": "node scripts/http-smoke.mjs"
   },
   "dependencies": {

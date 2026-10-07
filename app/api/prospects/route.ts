@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server';
 import { accessAllowed,mutationAllowed } from '@/lib/auth';
 import { loadPipeline } from '@/lib/store';
 import { importProspects,normalizePeople } from '@/lib/prospects';
+import { clientCheck,loadClients } from '@/lib/clients';
 export const runtime='nodejs';
 export async function GET(request:Request){
   if(!await accessAllowed(request))return NextResponse.json({error:'Unauthorized'},{status:401});
-  const data=await loadPipeline();return NextResponse.json({prospects:data.prospects??[],apolloConfigured:process.env.KEENA_DEMO!=='1'&&!!process.env.APOLLO_API_KEY},{headers:{'Cache-Control':'no-store'}});
+  const registry=loadClients();
+  const data=await loadPipeline();return NextResponse.json({prospects:(data.prospects??[]).map(p=>({...p,clientCheck:clientCheck(p.organization,p.domain,registry)})),apolloConfigured:process.env.KEENA_DEMO!=='1'&&!!process.env.APOLLO_API_KEY},{headers:{'Cache-Control':'no-store'}});
 }
 export async function POST(request:Request){
   if(!await accessAllowed(request))return NextResponse.json({error:'Unauthorized'},{status:401});

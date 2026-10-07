@@ -1,3 +1,4 @@
+import { clientCheck, loadClients } from './clients';
 import { mutatePipeline } from './store';
 import type { Prospect } from './prospect-types';
 export { PROSPECT_STAGES } from './prospect-types';
@@ -15,11 +16,17 @@ export function normalizePeople(value: unknown): Prospect[] {
   return [...new Map(rows.map(p=>[p.id,p])).values()];
 }
 export function importProspects(rows: Prospect[], file?: string) {
+  const registry = loadClients();
   return mutatePipeline(data=>{
     data.prospects ??= [];
-    const ids = new Set(data.prospects.map(p=>p.id)); let added=0;
-    for(const p of rows) if(!ids.has(p.id)){data.prospects.push({...p,stage:'new',notes:'',version:0});ids.add(p.id);added++;}
-    return {added,duplicates:rows.length-added};
+    const ids = new Set(data.prospects.map(p=>p.id)); let added=0, blockedExistingClient=0, duplicates=0;
+    for(const p of rows) {
+      const check=clientCheck(p.organization,p.domain,registry);
+      if(check.status==='existing_client'||check.status==='review'){blockedExistingClient++;continue;}
+      if(ids.has(p.id)){duplicates++;continue;}
+      data.prospects.push({...p,stage:'new',notes:'',version:0});ids.add(p.id);added++;
+    }
+    return {added,duplicates,blockedExistingClient};
   },file);
 }
 export function updateProspect(id:string, patch:{stage?:Prospect['stage'];notes?:string}, version:number, file?:string){

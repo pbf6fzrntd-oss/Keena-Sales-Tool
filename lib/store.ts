@@ -3,7 +3,7 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import type { Prospect } from './prospects';
 import { scoreCandidate, isoWeekKey, type Lead } from './scoring';
-export interface IngestRun {runAt:string;isoWeek:string;candidatesReviewed:number;added:number;skippedDuplicate:number;skippedOutOfIcp:number;skippedExpired:number;skippedOverTarget:number;}
+export interface IngestRun {runAt:string;isoWeek:string;candidatesReviewed:number;added:number;skippedDuplicate:number;skippedExistingClient?:number;skippedOutOfIcp:number;skippedExpired:number;skippedOverTarget:number;}
 export interface PipelineData {leads:Lead[];runs:IngestRun[];prospects?:Prospect[];}
 function defaultDataFile(){return process.env.KEENA_DEMO==='1'?path.join(process.cwd(),'.demo','pipeline.json'):process.env.KEENA_DATA_FILE??path.join(process.cwd(),'.local','pipeline.json');}
 function initial(file:string):PipelineData {

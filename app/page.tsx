@@ -40,6 +40,7 @@ import ProspectPanel from "./prospect-panel";
 
 interface LeadsResponse {
   leads: Lead[];
+  clientRegistry?: {loaded:boolean;accounts:number};
   mode: "example" | "pilot";
   isoWeek: string;
   addedThisWeek: number;
@@ -76,6 +77,7 @@ export default function Home() {
     leadVersions.current = new Map(data.leads.map(l=>[l.id,l.version??0]));
     setLeads(data.leads);
     setMeta({
+      clientRegistry: data.clientRegistry,
       mode: data.mode,
       isoWeek: data.isoWeek,
       addedThisWeek: data.addedThisWeek,
@@ -174,7 +176,7 @@ export default function Home() {
   const exportCsv = async () => {
     let saved: LeadsResponse; try { saved = await loadLeads(); } catch { toast.error("Cannot export unsaved/unavailable data."); return; }
     const rows = [
-      ["Organization", "Type", "Fit", "Service line", "Title", "Location", "Deadline", "Stage", "URL", "Notes", "Owner", "Checked at", "Next action", "Follow-up date"],
+      ["Organization", "Type", "Fit", "Service line", "Title", "Location", "Deadline", "Stage", "URL", "Notes", "Owner", "Checked at", "Next action", "Follow-up date", "Client screening"],
       ...saved.leads.map((l) => [
         l.organization,
         l.sourceType === "rfp" ? "RFP" : "Job posting",
@@ -184,7 +186,7 @@ export default function Home() {
         l.location,
         l.deadline ?? "",
         stageLabel[l.stage],
-        l.url, l.notes, l.owner ?? "Unassigned", l.checkedAt ?? "Unverified", l.nextAction ?? "", l.followUpDate ?? "",
+        l.url, l.notes, l.owner ?? "Unassigned", l.checkedAt ?? "Unverified", l.nextAction ?? "", l.followUpDate ?? "", l.clientCheck?.reason ?? "Not checked",
       ]),
     ];
     const csv = rows
@@ -209,7 +211,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#f5f6f7] text-[#222]">
-      <div role="status" className="p-3">{meta?.mode === "example" ? "Fictional demo queue — no real procurement or customer evidence." : "Local internal workspace — supervised source review; job postings are fit hypotheses, not confirmed buying intent."}</div>
+      <div role="status" className="p-3">{meta?.clientRegistry?.loaded ? `${meta.clientRegistry.accounts} active-client names loaded for screening. ` : "Active-client registry unavailable — review accounts before outreach. "}{meta?.mode === "example" ? "Fictional demo queue — no real procurement or customer evidence." : "Local internal workspace — supervised source review; job postings are fit hypotheses, not confirmed buying intent."}</div>
       <Toaster position="top-right" richColors />
       <header className="topbar">
         <div className="brand-lockup" aria-label="Keena Growth Operations">
@@ -388,7 +390,7 @@ export default function Home() {
                     <TableCell>
                       <div className="signal">
                         <strong>{l.signal}</strong>
-                        <span>{l.serviceLine}</span>
+                        <span>{l.serviceLine} · {l.clientCheck?.reason}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -460,6 +462,12 @@ export default function Home() {
                     &ldquo;{selected.matchedKeyword}&rdquo;. {selected.signal} · Checked: {selected.checkedAt ?? "Unverified"} · {(!selected.checkedAt || Date.now()-Date.parse(selected.checkedAt)>7*86400000) ? "Source review overdue" : "Recently checked"} · {selected.deadline && Date.parse(selected.deadline)<Date.now() ? "EXPIRED — do not pursue" : "Verify source before pursuing"}
                     {selected.postedDate && ` Posted ${selected.postedDate}.`}
                   </p>
+                </div>
+                <div className="brief-section">
+                  <h3>Client screening and product fit</h3>
+                  <p>{selected.clientCheck?.reason ?? "Client screening requires review"}</p>
+                  {selected.offeringMatches?.map(m=><p key={m.product}><strong>{m.product}</strong> · Deck slides {m.slides}<br/>Buyer roles: {m.buyerTitles.join(", ")}</p>)}
+                  <p>Discovery: confirm current EHR, scope, account owner, decision process, budget approval and project timing. Fit is a rules score, not a win probability.</p>
                 </div>
                 <div className="brief-section">
                   <h3>Pipeline stage</h3>

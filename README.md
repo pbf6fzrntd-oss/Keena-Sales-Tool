@@ -63,3 +63,19 @@ Demo data uses a separate `.demo` directory.
 `npm run test:http` (starts a temporary authenticated app on port 3107).
 Apollo transport tests use mocked responses; they do not spend credits or prove
 live access. Jev evaluates supplied state; it does not execute browser/tests.
+
+### Active-client screening and product matching
+
+Before Apollo discovery, import your active-client workbook locally:
+
+```sh
+python3 scripts/import-clients.py /absolute/path/to/active-clients.xlsx
+```
+
+The importer reads `COMPANYNAME`, `COMPANYNAME_CLEAN`, names, titles, emails and states. All named organizations are active clients, regardless of the spreadsheet's contact `MATCH_STATUS`. Blank formatted rows are ignored. Customer/contact records go only into ignored `.local/clients.json`; never commit that file, the workbook, or the deck to this public repository. Transfer the registry separately to your own local installation. Reimport replaces it, so preserve any manually curated aliases in your private backup.
+
+Exact normalized names and aliases block new-logo lead and prospect imports. Corporate email-domain overlaps also block imports pending account-owner affiliation review. Domains are hints extracted from contacts, not verified company ownership; common personal email providers do not suppress whole domains. Parent companies, subsidiaries, renamed accounts and unusual personal email providers require manual review. Historical leads and saved prospects receive current screening labels without deleting your notes. Missing or invalid client data cannot silently pass an Apollo search.
+
+Product hypotheses include source slide references and suggested buyer titles. Fit scores remain transparent keyword heuristics, not trained win probabilities. Confirm current EHR, purchased Keena services, project scope, owner, buying authority, timing, approved budget and competing vendors in discovery. Existing-client expansion stays with the account owner. The supplied client list does not establish installed services, account size, revenue, or conversion outcomes.
+
+Start Apollo with one reviewed non-client account and a maximum of 25 results per page. Choose buyer titles for the relevant offering; verify returned account identity, role and source evidence before saving. Email/phone enrichment is a separate future integration. No outreach or campaign enrollment occurs here.
