@@ -55,6 +55,16 @@ with zipfile.ZipFile(args.workbook) as archive:
 if not accounts:
     parser.error('No COMPANYNAME rows found; existing registry was not changed')
 clients = [{**a, 'aliases':sorted(a['aliases']), 'domains':sorted(a['domains']), 'states':sorted(a['states'])} for a in accounts.values()]
+# Preserve operator-reviewed affiliations and aliases through workbook refreshes.
+if args.output.exists():
+    previous = json.loads(args.output.read_text())
+    old = {a['name']:a for a in previous.get('clients',[])}
+    for account in clients:
+        curated = old.get(account['name'],{})
+        account['aliases'] = sorted(set(account['aliases']) | set(curated.get('aliases',[])))
+        for field in ['relatedNames','relatedDomains','relationshipEvidence']:
+            if field in curated:
+                account[field] = curated[field]
 args.output.parent.mkdir(parents=True,exist_ok=True)
 temporary = args.output.with_suffix('.tmp')
 temporary.write_text(json.dumps({'schemaVersion':1,'source':'User supplied active-client workbook','importedAt':datetime.now(timezone.utc).isoformat(),'clients':clients},indent=2))

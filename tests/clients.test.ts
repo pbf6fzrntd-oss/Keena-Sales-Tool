@@ -8,13 +8,15 @@ import {offeringMatches} from '../lib/offerings';
 import {ingestCandidates} from '../lib/ingest';
 import {importProspects,normalizePeople} from '../lib/prospects';
 import {loadPipeline} from '../lib/store';
-const registry:ClientRegistry={schemaVersion:1,clients:[{name:'Fictional Harbor & Valley LLC',aliases:['Fictional HV Clinic'],domains:['fictional-hv.example','gmail.com']}]};
+const registry:ClientRegistry={schemaVersion:1,clients:[{name:'Fictional Harbor & Valley LLC',aliases:['Fictional HV Clinic'],domains:['fictional-hv.example','gmail.com'],relatedNames:['Fictional Parent Health'],relatedDomains:['parent.example']}]};
 test('client screening normalizes names, uses aliases, reviews domains and never excludes personal email providers',()=>{
  assert.equal(accountKey('Fictional Harbor & Valley, LLC'),accountKey('Fictional Harbor and Valley'));
  assert.equal(clientCheck('Fictional HV Clinic','',registry).status,'existing_client');
  assert.equal(clientCheck('Other Org','www.fictional-hv.example',registry).status,'review');
  assert.equal(clientCheck('Other Org','gmail.com',registry).status,'no_match');
  assert.equal(clientCheck('Unlisted Subsidiary','sub.fictional-hv.example',registry).status,'no_match');
+ assert.equal(clientCheck('Fictional Parent Health','',registry).status,'review');
+ assert.equal(clientCheck('Other Name','parent.example',registry).status,'review');
  assert.equal(clientCheck('Unknown','',null).status,'unavailable');
 });
 test('missing registry is visible, malformed registry fails closed',()=>{
